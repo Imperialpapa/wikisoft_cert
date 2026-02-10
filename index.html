@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-IFRS 1019 데이터 검증 시스템 | 포트폴리오</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #030014;
+  --cyan: #00f0ff;
+  --cyan-dim: rgba(0,240,255,0.15);
+  --gold: #ffb347;
+  --gold-dim: rgba(255,179,71,0.12);
+  --purple: #a855f7;
+  --purple-dim: rgba(168,85,247,0.1);
+  --blue: #3b82f6;
+  --pink: #ec4899;
+  --white: #e2e8f0;
+  --white-70: rgba(226,232,240,0.7);
+  --white-40: rgba(226,232,240,0.4);
+  --white-15: rgba(226,232,240,0.15);
+  --white-08: rgba(226,232,240,0.08);
+  --display: 'Orbitron', sans-serif;
+  --body: 'Noto Sans KR', sans-serif;
+  --mono: 'Fira Code', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--white);
+  overflow-x: hidden;
+}
+
+/* ── 3D Canvas ── */
+#bg-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Scanline overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* ── Custom cursor glow ── */
+.cursor-glow {
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,240,255,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s;
+}
+
+/* ── Navigation ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  padding: 0 48px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(3,0,20,0.6);
+  backdrop-filter: blur(30px) saturate(1.5);
+  border-bottom: 1px solid var(--white-08);
+}
+
+.nav-logo {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.15em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 0 20px rgba(0,240,255,0.5);
+}
+
+.nav-logo .logo-box {
+  width: 36px; height: 36px;
+  border: 1.5px solid var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  position: relative;
+  clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+  box-shadow: 0 0 15px rgba(0,240,255,0.3), inset 0 0 15px rgba(0,240,255,0.1);
+}
+
+.nav-links { display: flex; gap: 32px; list-style: none; }
+
+.nav-links a {
+  color: var(--white-40);
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  transition: all 0.4s;
+  position: relative;
+  padding: 4px 0;
+}
+
+.nav-links a::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 0; height: 1px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-links a:hover { color: var(--cyan); text-shadow: 0 0 10px rgba(0,240,255,0.4); }
+.nav-links a:hover::before { width: 100%; }
+
+/* ── Hero ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 120px 80px 80px;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 960px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 24px;
+  background: var(--cyan-dim);
+  border: 1px solid rgba(0,240,255,0.2);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 40px;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  opacity: 0;
+  animation: glitchIn 0.6s 0.3s forwards;
+}
+
+.hero-badge .pulse-dot {
+  width: 8px; height: 8px;
+  background: var(--cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--cyan);
+  animation: pulseDot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--cyan); }
+  50% { opacity: 0.3; box-shadow: 0 0 4px var(--cyan); }
+}
+
+.hero-title {
+  font-family: var(--display);
+  font-size: clamp(36px, 5.5vw, 72px);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin-bottom: 28px;
+}
+
+.hero-title .line {
+  display: block;
+  opacity: 0;
+  animation: titleSlide 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-title .line:nth-child(1) { animation-delay: 0.5s; }
+.hero-title .line:nth-child(2) { animation-delay: 0.7s; }
+.hero-title .line:nth-child(3) { animation-delay: 0.9s; }
+
+@keyframes titleSlide {
+  from { opacity: 0; transform: translateX(-40px) skewX(-3deg); filter: blur(8px); }
+  to { opacity: 1; transform: translateX(0) skewX(0); filter: blur(0); }
+}
+
+.hero-title .glow {
+  background: linear-gradient(90deg, var(--cyan), var(--blue), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 30px rgba(0,240,255,0.3));
+  position: relative;
+}
+
+.hero-title .glow::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0; top: 0;
+  background: linear-gradient(90deg, var(--cyan), var(--blue), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: blur(20px);
+  opacity: 0.4;
+  z-index: -1;
+}
+
+.hero-desc {
+  font-size: 17px;
+  line-height: 1.9;
+  color: var(--white-70);
+  max-width: 620px;
+  margin-bottom: 50px;
+  opacity: 0;
+  animation: fadeUp 0.8s 1.1s forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-metrics {
+  display: flex;
+  gap: 48px;
+  opacity: 0;
+  animation: fadeUp 0.8s 1.3s forwards;
+}
+
+.metric {
+  position: relative;
+  padding: 20px 28px;
+  background: rgba(0,240,255,0.03);
+  border: 1px solid rgba(0,240,255,0.1);
+  min-width: 160px;
+  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+  transition: all 0.4s;
+}
+
+.metric:hover {
+  background: rgba(0,240,255,0.08);
+  border-color: rgba(0,240,255,0.3);
+  box-shadow: 0 0 30px rgba(0,240,255,0.1);
+}
+
+.metric-value {
+  font-family: var(--display);
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.metric-label {
+  font-family: var(--display);
+  font-size: 9px;
+  color: var(--white-40);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.hero-scroll-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fadeUp 0.8s 1.8s forwards;
+}
+
+.scroll-arrow {
+  width: 20px;
+  height: 30px;
+  border: 1.5px solid var(--white-15);
+  border-radius: 10px;
+  position: relative;
+}
+
+.scroll-arrow::after {
+  content: '';
+  width: 3px;
+  height: 8px;
+  background: var(--cyan);
+  border-radius: 2px;
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: scrollBounce 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--cyan);
+}
+
+@keyframes scrollBounce {
+  0%, 100% { top: 6px; opacity: 1; }
+  50% { top: 16px; opacity: 0.3; }
+}
+
+.scroll-text {
+  font-family: var(--display);
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  color: var(--white-40);
+  text-transform: uppercase;
+}
+
+@keyframes glitchIn {
+  0% { opacity: 0; transform: translateX(-20px); filter: blur(4px); }
+  30% { opacity: 1; transform: translateX(4px); filter: blur(0); }
+  50% { transform: translateX(-2px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Sections ── */
+section { padding: 140px 80px; position: relative; z-index: 2; }
+
+.section-header { margin-bottom: 72px; }
+
+.section-num {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: var(--cyan);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-shadow: 0 0 15px rgba(0,240,255,0.4);
+}
+
+.section-num::before {
+  content: '';
+  width: 30px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), transparent);
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.section-title {
+  font-family: var(--display);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.section-subtitle {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--white-40);
+  max-width: 550px;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Glass card base ── */
+.glass {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--white-08);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,240,255,0.03), transparent 50%);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.glass:hover::before { opacity: 1; }
+
+.glass:hover {
+  border-color: rgba(0,240,255,0.2);
+  box-shadow: 0 0 40px rgba(0,240,255,0.06), 0 20px 60px rgba(0,0,0,0.3);
+  transform: translateY(-8px) scale(1.01);
+}
+
+/* ── Overview ── */
+.overview-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 64px;
+  align-items: start;
+}
+
+.overview-text h3 {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.overview-text p {
+  font-size: 14.5px;
+  line-height: 2;
+  color: var(--white-70);
+  margin-bottom: 20px;
+}
+
+.code-block {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--white-08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 32px;
+  position: relative;
+}
+
+.code-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), transparent);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--white-08);
+}
+
+.code-dot { width: 8px; height: 8px; border-radius: 50%; }
+.code-dot:nth-child(1) { background: #ff5f57; }
+.code-dot:nth-child(2) { background: #febc2e; }
+.code-dot:nth-child(3) { background: #28c840; }
+
+.code-file {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--white-40);
+  margin-left: 10px;
+}
+
+.code-body {
+  padding: 20px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.9;
+}
+
+.c-comment { color: #6b7280; }
+.c-keyword { color: #c084fc; }
+.c-fn { color: var(--cyan); }
+.c-str { color: #34d399; }
+.c-var { color: #60a5fa; }
+.c-op { color: var(--white-40); }
+
+.check-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.check-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--white-70);
+  padding: 14px 20px;
+  background: rgba(0,240,255,0.02);
+  border: 1px solid rgba(0,240,255,0.06);
+  border-left: 2px solid var(--cyan);
+  transition: all 0.3s;
+}
+
+.check-list li:hover {
+  background: rgba(0,240,255,0.05);
+  border-left-color: var(--gold);
+  transform: translateX(4px);
+}
+
+.check-icon {
+  color: var(--cyan);
+  font-size: 14px;
+  min-width: 18px;
+  text-shadow: 0 0 8px var(--cyan);
+}
+
+/* ── Features Grid ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.feature-card {
+  padding: 36px 28px;
+  position: relative;
+}
+
+.feature-card .card-glow {
+  position: absolute;
+  top: -1px; left: -1px; right: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.feature-card:hover .card-glow { opacity: 1; }
+
+.feature-card:nth-child(2) .card-glow { background: linear-gradient(90deg, transparent, var(--purple), transparent); }
+.feature-card:nth-child(3) .card-glow { background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.feature-card:nth-child(4) .card-glow { background: linear-gradient(90deg, transparent, var(--pink), transparent); }
+.feature-card:nth-child(5) .card-glow { background: linear-gradient(90deg, transparent, var(--blue), transparent); }
+.feature-card:nth-child(6) .card-glow { background: linear-gradient(90deg, transparent, #22c55e, transparent); }
+
+.feature-icon-wrap {
+  width: 52px; height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  border: 1px solid var(--white-15);
+  position: relative;
+  font-size: 22px;
+  clip-path: polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%);
+  background: rgba(0,240,255,0.05);
+}
+
+.feature-card:nth-child(2) .feature-icon-wrap { background: var(--purple-dim); }
+.feature-card:nth-child(3) .feature-icon-wrap { background: var(--gold-dim); }
+.feature-card:nth-child(4) .feature-icon-wrap { background: rgba(236,72,153,0.08); }
+.feature-card:nth-child(5) .feature-icon-wrap { background: rgba(59,130,246,0.08); }
+.feature-card:nth-child(6) .feature-icon-wrap { background: rgba(34,197,94,0.08); }
+
+.feature-num {
+  font-family: var(--display);
+  font-size: 10px;
+  color: var(--cyan);
+  letter-spacing: 0.2em;
+  margin-bottom: 12px;
+}
+
+.feature-card:nth-child(2) .feature-num { color: var(--purple); }
+.feature-card:nth-child(3) .feature-num { color: var(--gold); }
+.feature-card:nth-child(4) .feature-num { color: var(--pink); }
+.feature-card:nth-child(5) .feature-num { color: var(--blue); }
+.feature-card:nth-child(6) .feature-num { color: #22c55e; }
+
+.feature-card h3 {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.feature-card p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--white-40);
+}
+
+/* ── Team ── */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+.team-card { overflow: visible; }
+
+.team-card-visual {
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Photo upload */
+.photo-upload-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3,0,20,0.6);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.team-card-visual:hover .photo-upload-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.photo-upload-overlay .upload-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 8px var(--cyan));
+}
+
+.photo-upload-overlay .upload-text {
+  font-family: var(--display);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(0,240,255,0.4);
+}
+
+.team-card-visual .uploaded-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 3;
+}
+
+.photo-input { display: none; }
+
+/* Certificate button */
+.cert-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 0;
+  background: rgba(0,240,255,0.05);
+  border: 1px solid rgba(0,240,255,0.15);
+  color: var(--cyan);
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+}
+
+.cert-btn:hover {
+  background: rgba(0,240,255,0.12);
+  border-color: rgba(0,240,255,0.4);
+  box-shadow: 0 0 20px rgba(0,240,255,0.15);
+  text-shadow: 0 0 8px rgba(0,240,255,0.5);
+}
+
+.cert-btn .btn-icon {
+  font-size: 14px;
+  filter: drop-shadow(0 0 4px var(--cyan));
+}
+
+.cert-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.cert-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.cert-btns .cert-btn {
+  flex: 1;
+  margin-top: 0;
+}
+
+.cert-btn-en {
+  color: var(--gold) !important;
+  background: rgba(255,179,71,0.05) !important;
+  border-color: rgba(255,179,71,0.15) !important;
+}
+
+.cert-btn-en:hover {
+  background: rgba(255,179,71,0.12) !important;
+  border-color: rgba(255,179,71,0.4) !important;
+  box-shadow: 0 0 20px rgba(255,179,71,0.15) !important;
+  text-shadow: 0 0 8px rgba(255,179,71,0.5) !important;
+}
+
+.cert-btn-en .btn-icon {
+  filter: drop-shadow(0 0 4px var(--gold)) !important;
+}
+
+.team-card:nth-child(1) .team-card-visual {
+  background: linear-gradient(135deg, rgba(0,240,255,0.08), rgba(59,130,246,0.04));
+}
+.team-card:nth-child(2) .team-card-visual {
+  background: linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.04));
+}
+.team-card:nth-child(3) .team-card-visual {
+  background: linear-gradient(135deg, rgba(255,179,71,0.08), rgba(34,197,94,0.04));
+}
+
+.team-card-visual canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.team-avatar {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 800;
+  position: relative;
+  z-index: 2;
+  border: 2px solid rgba(0,240,255,0.3);
+  background: rgba(3,0,20,0.7);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 30px rgba(0,240,255,0.15);
+}
+
+.team-card:nth-child(1) .team-avatar { color: var(--cyan); border-color: rgba(0,240,255,0.3); box-shadow: 0 0 30px rgba(0,240,255,0.15); }
+.team-card:nth-child(2) .team-avatar { color: var(--purple); border-color: rgba(168,85,247,0.3); box-shadow: 0 0 30px rgba(168,85,247,0.15); }
+.team-card:nth-child(3) .team-avatar { color: var(--gold); border-color: rgba(255,179,71,0.3); box-shadow: 0 0 30px rgba(255,179,71,0.15); }
+
+.team-body { padding: 28px; }
+
+.team-role {
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.team-card:nth-child(1) .team-role { color: var(--cyan); }
+.team-card:nth-child(2) .team-role { color: var(--purple); }
+.team-card:nth-child(3) .team-role { color: var(--gold); }
+
+.team-name {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.team-uni {
+  font-size: 12px;
+  color: var(--white-40);
+  margin-bottom: 16px;
+}
+
+.team-desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--white-70);
+  margin-bottom: 20px;
+}
+
+.team-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.team-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--white-08);
+  background: var(--white-08);
+  color: var(--white-70);
+}
+
+/* ── Tech ── */
+.tech-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+}
+
+.tech-group { margin-bottom: 40px; }
+.tech-group:last-child { margin-bottom: 0; }
+
+.tech-group-title {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--white-08);
+  text-shadow: 0 0 10px rgba(0,240,255,0.3);
+}
+
+.tech-items { display: flex; flex-direction: column; gap: 8px; }
+
+.tech-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--white-08);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.tech-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: linear-gradient(90deg, rgba(0,240,255,0.08), transparent);
+  transition: width 0.4s;
+}
+
+.tech-item:hover::before { width: 100%; }
+
+.tech-item:hover {
+  border-color: rgba(0,240,255,0.15);
+  transform: translateX(4px);
+}
+
+.tech-icon {
+  width: 34px; height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 1px solid var(--white-08);
+  background: var(--white-08);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.tech-info { position: relative; z-index: 1; }
+.tech-name { font-size: 13.5px; font-weight: 500; margin-bottom: 2px; }
+.tech-desc-text { font-size: 11px; color: var(--white-40); }
+
+/* Architecture diagram */
+.arch-diagram {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--white-08);
+  padding: 36px;
+  position: relative;
+}
+
+.arch-diagram::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--gold));
+}
+
+.arch-title {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+  margin-bottom: 28px;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(0,240,255,0.3);
+}
+
+.arch-steps { display: flex; flex-direction: column; gap: 0; }
+
+.arch-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+.arch-step-num {
+  width: 30px; height: 30px;
+  border: 1.5px solid var(--cyan);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cyan);
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(0,240,255,0.2);
+  transition: all 0.3s;
+}
+
+.arch-step:hover .arch-step-num {
+  background: var(--cyan);
+  color: var(--bg);
+  box-shadow: 0 0 20px rgba(0,240,255,0.4);
+}
+
+.arch-step-text {
+  font-size: 13px;
+  color: var(--white-70);
+}
+
+.arch-connector {
+  width: 1px; height: 16px;
+  margin-left: 15px;
+  background: linear-gradient(180deg, rgba(0,240,255,0.3), rgba(0,240,255,0.05));
+}
+
+/* Terminal */
+.terminal-block {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--white-08);
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.terminal-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,240,255,0.02), transparent);
+}
+
+/* ── Timeline ── */
+.tl-container {
+  max-width: 780px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.tl-container::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--cyan), var(--purple), var(--gold), transparent);
+  box-shadow: 0 0 10px rgba(0,240,255,0.2);
+}
+
+.tl-item {
+  position: relative;
+  padding-left: 52px;
+  padding-bottom: 60px;
+}
+
+.tl-item:last-child { padding-bottom: 0; }
+
+.tl-dot {
+  position: absolute;
+  left: -6px; top: 8px;
+  width: 14px; height: 14px;
+  border: 2px solid var(--cyan);
+  background: var(--bg);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(0,240,255,0.3);
+  transition: all 0.3s;
+}
+
+.tl-item:hover .tl-dot {
+  background: var(--cyan);
+  box-shadow: 0 0 20px rgba(0,240,255,0.5);
+}
+
+.tl-item:nth-child(2) .tl-dot { border-color: var(--purple); box-shadow: 0 0 12px rgba(168,85,247,0.3); }
+.tl-item:nth-child(2):hover .tl-dot { background: var(--purple); box-shadow: 0 0 20px rgba(168,85,247,0.5); }
+.tl-item:nth-child(3) .tl-dot { border-color: var(--blue); box-shadow: 0 0 12px rgba(59,130,246,0.3); }
+.tl-item:nth-child(3):hover .tl-dot { background: var(--blue); }
+.tl-item:nth-child(4) .tl-dot { border-color: var(--gold); box-shadow: 0 0 12px rgba(255,179,71,0.3); }
+.tl-item:nth-child(4):hover .tl-dot { background: var(--gold); }
+.tl-item:nth-child(5) .tl-dot { border-color: #22c55e; box-shadow: 0 0 12px rgba(34,197,94,0.3); }
+.tl-item:nth-child(5):hover .tl-dot { background: #22c55e; }
+
+.tl-date {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  text-shadow: 0 0 10px rgba(0,240,255,0.3);
+}
+
+.tl-item:nth-child(2) .tl-date { color: var(--purple); text-shadow: 0 0 10px rgba(168,85,247,0.3); }
+.tl-item:nth-child(3) .tl-date { color: var(--blue); }
+.tl-item:nth-child(4) .tl-date { color: var(--gold); }
+.tl-item:nth-child(5) .tl-date { color: #22c55e; }
+
+.tl-item h3 {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.tl-item p {
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--white-40);
+}
+
+/* ── Footer ── */
+.footer {
+  padding: 80px;
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid var(--white-08);
+  background: rgba(3,0,20,0.8);
+}
+
+.footer-inner {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 64px;
+  margin-bottom: 56px;
+}
+
+.footer-brand {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 14px;
+  text-shadow: 0 0 15px rgba(0,240,255,0.4);
+}
+
+.footer-brand-desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--white-40);
+  max-width: 400px;
+}
+
+.footer-heading {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 18px;
+}
+
+.footer-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-list li,
+.footer-list a {
+  font-size: 13px;
+  color: var(--white-40);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.footer-list a:hover { color: var(--cyan); }
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 28px;
+  border-top: 1px solid var(--white-08);
+  font-size: 11px;
+  color: var(--white-40);
+}
+
+/* ── Mobile menu button ── */
+.nav-menu-btn {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  z-index: 1002;
+}
+
+.nav-menu-btn span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--cyan);
+  border-radius: 1px;
+  transition: all 0.3s;
+  box-shadow: 0 0 4px rgba(0,240,255,0.3);
+}
+
+.nav-menu-btn.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.nav-menu-btn.active span:nth-child(2) { opacity: 0; }
+.nav-menu-btn.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+/* Mobile overlay menu */
+.mobile-menu {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(3,0,20,0.95);
+  backdrop-filter: blur(30px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+.mobile-menu.open { display: flex; }
+
+.mobile-menu a {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--white-40);
+  text-decoration: none;
+  transition: all 0.3s;
+  padding: 8px 0;
+  position: relative;
+}
+
+.mobile-menu a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 1px;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  transition: width 0.3s;
+}
+
+.mobile-menu a:hover,
+.mobile-menu a:active { color: var(--cyan); text-shadow: 0 0 10px rgba(0,240,255,0.4); }
+.mobile-menu a:hover::after { width: 100%; }
+
+/* ── Responsive: Tablet ── */
+@media (max-width: 1024px) {
+  section, .hero { padding: 80px 40px; }
+  .nav { padding: 0 24px; }
+  .overview-layout { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .team-grid { grid-template-columns: 1fr 1fr; }
+  .tech-grid { grid-template-columns: 1fr; }
+  .footer { padding: 60px 40px; }
+  .footer-inner { grid-template-columns: 1fr 1fr; gap: 40px; }
+  .cursor-glow { display: none; }
+}
+
+/* ── Responsive: Mobile ── */
+@media (max-width: 768px) {
+  section { padding: 64px 20px; }
+  .hero { padding: 100px 20px 60px; min-height: auto; }
+
+  /* Nav */
+  .nav { padding: 0 16px; height: 60px; }
+  .nav-logo { font-size: 12px; gap: 8px; }
+  .nav-logo .logo-box { width: 28px; height: 28px; font-size: 11px; }
+  .nav-links { display: none; }
+  .nav-menu-btn { display: flex; }
+
+  /* Hero */
+  .hero-title { font-size: clamp(26px, 7vw, 42px); margin-bottom: 20px; }
+  .hero-badge { font-size: 9px; padding: 6px 16px; margin-bottom: 24px; letter-spacing: 0.12em; }
+  .hero-desc { font-size: 14px; line-height: 1.8; margin-bottom: 32px; }
+  .hero-metrics { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+  .metric { min-width: 0; flex: 1; padding: 14px 16px; }
+  .metric-value { font-size: 24px; }
+  .metric-label { font-size: 7px; letter-spacing: 0.12em; }
+  .hero-scroll-hint { display: none; }
+  .cursor-glow { display: none; }
+
+  /* Section headers */
+  .section-header { margin-bottom: 40px; }
+  .section-num { font-size: 9px; letter-spacing: 0.2em; }
+  .section-title { font-size: clamp(22px, 6vw, 32px); }
+  .section-subtitle { font-size: 13px; }
+
+  /* Overview */
+  .overview-layout { grid-template-columns: 1fr; gap: 32px; }
+  .overview-text h3 { font-size: 17px; }
+  .overview-text p { font-size: 13px; line-height: 1.8; }
+  .code-body { font-size: 11px; padding: 14px; overflow-x: auto; }
+  .check-list li { padding: 10px 14px; font-size: 12.5px; }
+
+  /* Features */
+  .features-grid { grid-template-columns: 1fr; gap: 14px; }
+  .feature-card { padding: 24px 20px; }
+  .feature-card h3 { font-size: 14px; }
+  .feature-card p { font-size: 12px; }
+  .feature-icon-wrap { width: 42px; height: 42px; font-size: 18px; margin-bottom: 16px; }
+
+  /* Team */
+  .team-grid { grid-template-columns: 1fr; gap: 20px; }
+  .team-card-visual { height: 180px; }
+  .team-avatar { width: 72px; height: 72px; font-size: 22px; }
+  .team-body { padding: 20px; }
+  .team-role { font-size: 8px; }
+  .team-name { font-size: 17px; }
+  .team-uni { font-size: 11px; }
+  .team-desc { font-size: 12px; margin-bottom: 14px; }
+  .team-tag { font-size: 9px; padding: 3px 8px; }
+  .cert-btns { flex-direction: column; gap: 8px; }
+  .cert-btn { padding: 12px 0; font-size: 9px; }
+
+  /* Photo upload overlay - always slightly visible on mobile for discoverability */
+  .photo-upload-overlay { opacity: 0.6; pointer-events: auto; }
+  .photo-upload-overlay .upload-icon { font-size: 20px; }
+  .photo-upload-overlay .upload-text { font-size: 8px; }
+
+  /* Tech */
+  .tech-grid { grid-template-columns: 1fr; gap: 32px; }
+  .tech-group-title { font-size: 9px; }
+  .tech-item { padding: 10px 14px; gap: 12px; }
+  .tech-icon { width: 30px; height: 30px; font-size: 15px; }
+  .tech-name { font-size: 12.5px; }
+  .tech-desc-text { font-size: 10px; }
+  .arch-diagram { padding: 24px; }
+  .arch-title { font-size: 9px; margin-bottom: 20px; }
+  .arch-step-text { font-size: 12px; }
+  .arch-step-num { width: 26px; height: 26px; font-size: 10px; }
+
+  /* Timeline */
+  .tl-container { max-width: 100%; }
+  .tl-item { padding-left: 36px; padding-bottom: 40px; }
+  .tl-date { font-size: 10px; }
+  .tl-item h3 { font-size: 15px; }
+  .tl-item p { font-size: 12.5px; }
+
+  /* Footer */
+  .footer { padding: 48px 20px; }
+  .footer-inner { grid-template-columns: 1fr; gap: 32px; margin-bottom: 32px; }
+  .footer-brand { font-size: 13px; }
+  .footer-brand-desc { font-size: 12px; }
+  .footer-heading { font-size: 9px; }
+  .footer-list li, .footer-list a { font-size: 12px; }
+  .footer-bottom { flex-direction: column; gap: 8px; text-align: center; font-size: 10px; }
+
+  /* Glass card: reduce hover transform on mobile (no hover on touch) */
+  .glass:hover { transform: none; }
+  .feature-card:hover { transform: none; }
+}
+
+/* ── Responsive: Small phones ── */
+@media (max-width: 400px) {
+  section { padding: 48px 16px; }
+  .hero { padding: 90px 16px 48px; }
+  .hero-title { font-size: 24px; }
+  .hero-desc { font-size: 13px; }
+  .hero-metrics { flex-direction: column; gap: 10px; }
+  .metric { padding: 12px 14px; }
+  .metric-value { font-size: 22px; }
+  .section-title { font-size: 20px; }
+  .nav { padding: 0 12px; }
+  .footer { padding: 36px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 3D Background Canvas -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Cursor Glow -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="logo-box">19</div>
+    K-IFRS 1019
+  </div>
+  <ul class="nav-links">
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#team">Team</a></li>
+    <li><a href="#tech">Stack</a></li>
+    <li><a href="#timeline">Timeline</a></li>
+  </ul>
+  <button class="nav-menu-btn" id="menuBtn" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#overview">Overview</a>
+  <a href="#features">Features</a>
+  <a href="#team">Team</a>
+  <a href="#tech">Stack</a>
+  <a href="#timeline">Timeline</a>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="pulse-dot"></span>
+      2025 INTERNSHIP PROJECT
+    </div>
+    <h1 class="hero-title">
+      <span class="line"><span class="glow" data-text="K-IFRS 1019">K-IFRS 1019</span> &nbsp;기반</span>
+      <span class="line">종업원급여 데이터</span>
+      <span class="line">검증 시스템</span>
+    </h1>
+    <p class="hero-desc">
+      한국채택국제회계기준 제1019호에 따른 종업원급여 회계 데이터의 정합성을 자동으로 검증합니다. 보험수리적 가정과 확정급여채무 산출의 정확성을 보장하는 차세대 검증 엔진.
+    </p>
+    <div class="hero-metrics">
+      <div class="metric">
+        <div class="metric-value" data-count="47">0</div>
+        <div class="metric-label">Validation Rules</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" data-count="99" data-suffix=".7%">0</div>
+        <div class="metric-label">Accuracy</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" data-count="3">0</div>
+        <div class="metric-label">Team Members</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-scroll-hint">
+    <div class="scroll-arrow"></div>
+    <div class="scroll-text">Scroll</div>
+  </div>
+</section>
+
+<!-- Overview -->
+<section id="overview">
+  <div class="section-header reveal">
+    <div class="section-num">01 &mdash; PROJECT OVERVIEW</div>
+    <div class="section-title">프로젝트 개요</div>
+    <div class="section-subtitle">K-IFRS 1019호는 종업원에게 제공하는 모든 형태의 급여에 대한 회계처리를 규정합니다.</div>
+  </div>
+
+  <div class="overview-layout">
+    <div class="reveal">
+      <div class="overview-text">
+        <h3>왜 이 프로젝트가 필요한가?</h3>
+        <p>K-IFRS 1019호에 따른 종업원급여 회계는 보험수리적 가정, 할인율 산정, 확정급여채무(DBO) 계산 등 복잡한 과정을 수반합니다. 기존에는 수작업에 의존하여 오류 발생 가능성이 높고, 감사 대응에 많은 시간이 소요되었습니다.</p>
+        <p>본 시스템은 종업원급여 관련 재무 데이터를 자동으로 수집 및 분석하여, 기준서 요구사항과의 적합성을 실시간으로 검증합니다.</p>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div>
+          <span class="code-file">validation_engine.py</span>
+        </div>
+        <div class="code-body">
+          <div><span class="c-comment"># K-IFRS 1019 검증 엔진 코어</span></div>
+          <div><span class="c-keyword">class</span> <span class="c-fn">KIFRSValidator</span><span class="c-op">:</span></div>
+          <div>&nbsp;&nbsp;<span class="c-keyword">def</span> <span class="c-fn">validate_dbo</span><span class="c-op">(</span><span class="c-var">self</span><span class="c-op">,</span> <span class="c-var">data</span><span class="c-op">):</span></div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">"""확정급여채무 검증"""</span></div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-var">result</span> <span class="c-op">=</span> <span class="c-var">self</span><span class="c-op">.</span><span class="c-fn">check_actuarial</span><span class="c-op">(</span><span class="c-var">data</span><span class="c-op">)</span></div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-keyword">return</span> <span class="c-var">result</span><span class="c-op">.</span><span class="c-var">is_valid</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal" style="padding-top: 20px;">
+      <div style="font-family: var(--display); font-size: 10px; letter-spacing: 0.2em; color: var(--cyan); margin-bottom: 20px; text-shadow: 0 0 10px rgba(0,240,255,0.3);">VALIDATION SCOPE</div>
+      <ul class="check-list">
+        <li><span class="check-icon">&#9656;</span><span>확정급여채무(DBO) 산출의 보험수리적 가정 적정성 검증</span></li>
+        <li><span class="check-icon">&#9656;</span><span>사외적립자산의 공정가치 측정 및 수익률 검증</span></li>
+        <li><span class="check-icon">&#9656;</span><span>할인율 적용의 일관성 및 시장 데이터 정합성 확인</span></li>
+        <li><span class="check-icon">&#9656;</span><span>재측정요소의 기타포괄손익 반영 적정성 검증</span></li>
+        <li><span class="check-icon">&#9656;</span><span>과거근무원가 및 축소/정산 손익 인식 검증</span></li>
+        <li><span class="check-icon">&#9656;</span><span>공시 요구사항 충족 여부 자동 점검</span></li>
+        <li><span class="check-icon">&#9656;</span><span>전기 대비 변동 분석 및 이상치 탐지</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-header reveal">
+    <div class="section-num">02 &mdash; KEY FEATURES</div>
+    <div class="section-title">핵심 기능</div>
+    <div class="section-subtitle">정교한 검증 로직과 직관적인 인터페이스로 회계 전문가가 신뢰할 수 있는 검증 결과를 제공합니다.</div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card glass reveal">
+      <div class="card-glow"></div>
+      <div class="feature-icon-wrap">&#9635;</div>
+      <div class="feature-num">FEAT.01</div>
+      <h3>자동 데이터 수집</h3>
+      <p>Excel, CSV 등 다양한 형식의 재무 데이터를 자동으로 파싱하여 표준화된 데이터 구조로 변환합니다.</p>
+    </div>
+    <div class="feature-card glass reveal">
+      <div class="card-glow"></div>
+      <div class="feature-icon-wrap">&#9881;</div>
+      <div class="feature-num">FEAT.02</div>
+      <h3>규칙 기반 검증</h3>
+      <p>K-IFRS 1019호의 47개 검증 규칙을 체계적으로 적용하여 데이터의 기준서 적합성을 판단합니다.</p>
+    </div>
+    <div class="feature-card glass reveal">
+      <div class="card-glow"></div>
+      <div class="feature-icon-wrap">&#9906;</div>
+      <div class="feature-num">FEAT.03</div>
+      <h3>이상치 탐지</h3>
+      <p>통계적 기법과 도메인 지식을 활용하여 보험수리적 가정의 이상값을 자동으로 식별합니다.</p>
+    </div>
+    <div class="feature-card glass reveal">
+      <div class="card-glow"></div>
+      <div class="feature-icon-wrap">&#9776;</div>
+      <div class="feature-num">FEAT.04</div>
+      <h3>검증 리포트</h3>
+      <p>검증 결과를 시각적으로 명확하게 보여주는 상세 리포트를 자동 생성하여 감사 대응을 지원합니다.</p>
+    </div>
+    <div class="feature-card glass reveal">
+      <div class="card-glow"></div>
+      <div class="feature-icon-wrap">&#8644;</div>
+      <div class="feature-num">FEAT.05</div>
+      <h3>전기 비교 분석</h3>
+      <p>당기와 전기 데이터를 자동 비교하여 주요 변동 사항을 분석하고 변동 원인을 추적합니다.</p>
+    </div>
+    <div class="feature-card glass reveal">
+      <div class="card-glow"></div>
+      <div class="feature-icon-wrap">&#9745;</div>
+      <div class="feature-num">FEAT.06</div>
+      <h3>공시 체크리스트</h3>
+      <p>K-IFRS 1019호에서 요구하는 공시 항목의 누락 여부를 자동으로 확인하고 알림을 제공합니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Team -->
+<section id="team">
+  <div class="section-header reveal">
+    <div class="section-num">03 &mdash; OUR TEAM</div>
+    <div class="section-title">팀원 소개</div>
+    <div class="section-subtitle">다양한 공학 분야의 전문성을 결합한 세 명의 인턴이 프로젝트를 이끕니다.</div>
+  </div>
+
+  <div class="team-grid">
+    <div class="team-card glass reveal" data-member="이강준" data-dept="항공우주공학과" data-role="데이터 파이프라인 설계 및 검증 엔진 코어 개발">
+      <div class="team-card-visual" onclick="this.querySelector('.photo-input').click()">
+        <canvas class="team-3d" data-color="0,240,255"></canvas>
+        <div class="team-avatar" id="avatar-0">KJ</div>
+        <input type="file" class="photo-input" accept="image/*" onchange="handlePhotoUpload(this, 0)">
+        <div class="photo-upload-overlay">
+          <div class="upload-icon">&#9650;</div>
+          <div class="upload-text">사진 업로드</div>
+        </div>
+      </div>
+      <div class="team-body">
+        <div class="team-role">Data Pipeline & Core Engine</div>
+        <div class="team-name">이강준</div>
+        <div class="team-uni">항공우주공학과</div>
+        <div class="team-desc">검증 엔진 코어 로직 설계 및 데이터 파이프라인 구축을 담당합니다. 항공우주 분야의 정밀한 수치 해석 경험을 검증 시스템에 적용합니다.</div>
+        <div class="team-tags">
+          <span class="team-tag">Python</span>
+          <span class="team-tag">pandas</span>
+          <span class="team-tag">FastAPI</span>
+        </div>
+        <div class="cert-btns">
+          <button class="cert-btn" onclick="generateCertificateKR('이강준', '항공우주공학과', '데이터 파이프라인 설계 및 검증 엔진 코어 개발')">
+            <span class="btn-icon">&#8681;</span> 경력증명서 (KOR)
+          </button>
+          <button class="cert-btn cert-btn-en" onclick="generateCertificateEN('Lee Kangjun', 'Aerospace Engineering', 'Data pipeline design and core validation engine development')">
+            <span class="btn-icon">&#8681;</span> Certificate (ENG)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card glass reveal" data-member="류상연" data-dept="대기과학과" data-role="K-IFRS 1019호 기준서 분석 및 검증 규칙 정의">
+      <div class="team-card-visual" onclick="this.querySelector('.photo-input').click()">
+        <canvas class="team-3d" data-color="168,85,247"></canvas>
+        <div class="team-avatar" id="avatar-1">SY</div>
+        <input type="file" class="photo-input" accept="image/*" onchange="handlePhotoUpload(this, 1)">
+        <div class="photo-upload-overlay">
+          <div class="upload-icon">&#9650;</div>
+          <div class="upload-text">사진 업로드</div>
+        </div>
+      </div>
+      <div class="team-body">
+        <div class="team-role">Data Analyst & Validation Rules</div>
+        <div class="team-name">류상연</div>
+        <div class="team-uni">대기과학과</div>
+        <div class="team-desc">K-IFRS 1019호 기준서 분석 및 검증 규칙 정의를 담당합니다. 대기과학의 통계적 분석 역량을 활용하여 이상치 탐지 로직을 설계합니다.</div>
+        <div class="team-tags">
+          <span class="team-tag">K-IFRS</span>
+          <span class="team-tag">통계 분석</span>
+          <span class="team-tag">데이터 검증</span>
+        </div>
+        <div class="cert-btns">
+          <button class="cert-btn" onclick="generateCertificateKR('류상연', '대기과학과', 'K-IFRS 1019호 기준서 분석 및 검증 규칙 정의')">
+            <span class="btn-icon">&#8681;</span> 경력증명서 (KOR)
+          </button>
+          <button class="cert-btn cert-btn-en" onclick="generateCertificateEN('Ryu Sangyeon', 'Atmospheric Science', 'K-IFRS 1019 standard analysis and validation rule definition')">
+            <span class="btn-icon">&#8681;</span> Certificate (ENG)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card glass reveal" data-member="박준환" data-dept="컴퓨터공학과" data-role="프론트엔드 대시보드 및 검증 결과 시각화 개발">
+      <div class="team-card-visual" onclick="this.querySelector('.photo-input').click()">
+        <canvas class="team-3d" data-color="255,179,71"></canvas>
+        <div class="team-avatar" id="avatar-2">JH</div>
+        <input type="file" class="photo-input" accept="image/*" onchange="handlePhotoUpload(this, 2)">
+        <div class="photo-upload-overlay">
+          <div class="upload-icon">&#9650;</div>
+          <div class="upload-text">사진 업로드</div>
+        </div>
+      </div>
+      <div class="team-body">
+        <div class="team-role">Frontend & Visualization</div>
+        <div class="team-name">박준환</div>
+        <div class="team-uni">컴퓨터공학과</div>
+        <div class="team-desc">검증 결과 대시보드 및 리포트 시각화를 담당합니다. 사용자 경험을 최적화하여 직관적인 인터페이스를 구현합니다.</div>
+        <div class="team-tags">
+          <span class="team-tag">React</span>
+          <span class="team-tag">D3.js</span>
+          <span class="team-tag">UI/UX</span>
+        </div>
+        <div class="cert-btns">
+          <button class="cert-btn" onclick="generateCertificateKR('박준환', '컴퓨터공학과', '프론트엔드 대시보드 및 검증 결과 시각화 개발')">
+            <span class="btn-icon">&#8681;</span> 경력증명서 (KOR)
+          </button>
+          <button class="cert-btn cert-btn-en" onclick="generateCertificateEN('Park Junhwan', 'Computer Science & Engineering', 'Frontend dashboard and validation result visualization development')">
+            <span class="btn-icon">&#8681;</span> Certificate (ENG)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech -->
+<section id="tech">
+  <div class="section-header reveal">
+    <div class="section-num">04 &mdash; TECH STACK</div>
+    <div class="section-title">기술 스택</div>
+    <div class="section-subtitle">안정성과 확장성을 고려한 기술 스택으로 엔터프라이즈급 검증 시스템을 구축합니다.</div>
+  </div>
+
+  <div class="tech-grid reveal">
+    <div>
+      <div class="tech-group">
+        <div class="tech-group-title">Backend & Core</div>
+        <div class="tech-items">
+          <div class="tech-item"><div class="tech-icon">&#9672;</div><div class="tech-info"><div class="tech-name">Python 3.11+</div><div class="tech-desc-text">검증 엔진 코어 및 데이터 처리</div></div></div>
+          <div class="tech-item"><div class="tech-icon">&#9638;</div><div class="tech-info"><div class="tech-name">pandas / NumPy</div><div class="tech-desc-text">대규모 재무 데이터 분석 및 처리</div></div></div>
+          <div class="tech-item"><div class="tech-icon">&#9889;</div><div class="tech-info"><div class="tech-name">FastAPI</div><div class="tech-desc-text">RESTful API 서버 구축</div></div></div>
+          <div class="tech-item"><div class="tech-icon">&#9707;</div><div class="tech-info"><div class="tech-name">PostgreSQL</div><div class="tech-desc-text">검증 결과 및 이력 데이터 저장</div></div></div>
+        </div>
+      </div>
+      <div class="tech-group">
+        <div class="tech-group-title">Frontend & Visualization</div>
+        <div class="tech-items">
+          <div class="tech-item"><div class="tech-icon">&#9883;</div><div class="tech-info"><div class="tech-name">React 18</div><div class="tech-desc-text">대시보드 SPA 프레임워크</div></div></div>
+          <div class="tech-item"><div class="tech-icon">&#9650;</div><div class="tech-info"><div class="tech-name">D3.js / Recharts</div><div class="tech-desc-text">검증 결과 인터랙티브 시각화</div></div></div>
+        </div>
+      </div>
+      <div class="tech-group">
+        <div class="tech-group-title">Data & Parsing</div>
+        <div class="tech-items">
+          <div class="tech-item"><div class="tech-icon">&#9724;</div><div class="tech-info"><div class="tech-name">openpyxl / xlrd</div><div class="tech-desc-text">Excel 파일 파싱 및 데이터 추출</div></div></div>
+          <div class="tech-item"><div class="tech-icon">&#9745;</div><div class="tech-info"><div class="tech-name">Pydantic</div><div class="tech-desc-text">데이터 스키마 검증 및 직렬화</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="arch-diagram">
+        <div class="arch-title">Validation Pipeline Architecture</div>
+        <div class="arch-steps">
+          <div class="arch-step"><div class="arch-step-num">1</div><div class="arch-step-text">Excel/CSV 재무 데이터 업로드</div></div>
+          <div class="arch-connector"></div>
+          <div class="arch-step"><div class="arch-step-num">2</div><div class="arch-step-text">openpyxl로 데이터 파싱 및 정규화</div></div>
+          <div class="arch-connector"></div>
+          <div class="arch-step"><div class="arch-step-num">3</div><div class="arch-step-text">Pydantic 스키마로 구조 검증</div></div>
+          <div class="arch-connector"></div>
+          <div class="arch-step"><div class="arch-step-num">4</div><div class="arch-step-text">K-IFRS 1019 규칙 엔진 적용</div></div>
+          <div class="arch-connector"></div>
+          <div class="arch-step"><div class="arch-step-num">5</div><div class="arch-step-text">이상치 탐지 및 전기 비교 분석</div></div>
+          <div class="arch-connector"></div>
+          <div class="arch-step"><div class="arch-step-num">6</div><div class="arch-step-text">검증 리포트 생성 및 대시보드 표시</div></div>
+        </div>
+      </div>
+
+      <div class="terminal-block">
+        <div class="code-header">
+          <div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div>
+          <span class="code-file">terminal</span>
+        </div>
+        <div class="code-body">
+          <div><span class="c-fn">$</span> python -m kifrs.validate</div>
+          <div><span class="c-str">&#10003; 데이터 로드 완료 (3,482 rows)</span></div>
+          <div><span class="c-str">&#10003; 스키마 검증 통과</span></div>
+          <div><span class="c-str">&#10003; DBO 검증 규칙 적용 중...</span></div>
+          <div><span class="c-fn">&#10003; 47/47 규칙 검증 완료</span></div>
+          <div><span class="c-fn">&#10003; 리포트 생성: report_2025.pdf</span></div>
+          <div>&nbsp;</div>
+          <div><span class="c-fn">결과:</span> <span class="c-str">PASS</span> <span class="c-op">&mdash; 정확도 99.7%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Timeline -->
+<section id="timeline">
+  <div class="section-header reveal">
+    <div class="section-num">05 &mdash; TIMELINE</div>
+    <div class="section-title">프로젝트 타임라인</div>
+    <div class="section-subtitle">체계적인 단계별 접근을 통해 안정적이고 신뢰할 수 있는 검증 시스템을 구축합니다.</div>
+  </div>
+
+  <div class="tl-container reveal">
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">2025.03 &mdash; 2025.04</div>
+      <h3>1단계: 요구사항 분석 및 설계</h3>
+      <p>K-IFRS 1019호 기준서 심층 분석, 검증 규칙 정의, 시스템 아키텍처 설계 및 프로토타입 기획</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">2025.05 &mdash; 2025.06</div>
+      <h3>2단계: 코어 엔진 개발</h3>
+      <p>데이터 파싱 모듈 구현, 검증 규칙 엔진 코어 개발, 단위 테스트 작성 및 1차 검증 로직 완성</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">2025.07 &mdash; 2025.08</div>
+      <h3>3단계: 대시보드 및 리포트 개발</h3>
+      <p>프론트엔드 대시보드 구현, 검증 결과 시각화, 자동 리포트 생성 기능 개발 및 API 연동</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">2025.09 &mdash; 2025.10</div>
+      <h3>4단계: 통합 테스트 및 최적화</h3>
+      <p>실제 재무 데이터 기반 통합 테스트, 성능 최적화, 사용자 피드백 반영 및 문서화</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">2025.11</div>
+      <h3>5단계: 최종 발표 및 배포</h3>
+      <p>프로젝트 최종 발표, 운영 환경 배포, 사용자 매뉴얼 작성 및 인수인계</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">K-IFRS 1019 VALIDATION SYSTEM</div>
+      <p class="footer-brand-desc">위키소프트보험계리법인 인턴십 프로젝트. 한국채택국제회계기준 제1019호 종업원급여 데이터 검증을 위한 자동화 솔루션.</p>
+    </div>
+    <div>
+      <div class="footer-heading">Contact</div>
+      <ul class="footer-list">
+        <li>mayman11@wikisoft.co.kr</li>
+        <li>서울시 종로구 인사동5길 42 종로빌딩 502호</li>
+        <li>010-2822-1895</li>
+        <li>www.wkac.co.kr</li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-heading">Links</div>
+      <ul class="footer-list">
+        <li><a href="#overview">프로젝트 개요</a></li>
+        <li><a href="#features">핵심 기능</a></li>
+        <li><a href="#team">팀원 소개</a></li>
+        <li><a href="#tech">기술 스택</a></li>
+        <li><a href="#timeline">타임라인</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>&copy; 2025 위키소프트보험계리법인 (WIKISOFT). All rights reserved.</div>
+    <div>Internship Portfolio Project</div>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════
+//  THREE.JS — FULL-SCREEN 3D PARTICLE BACKGROUND
+// ═══════════════════════════════════════════════
+
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.z = 5;
+
+  // ── Particle field ──
+  const particleCount = 2000;
+  const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+  const sizes = new Float32Array(particleCount);
+
+  for (let i = 0; i < particleCount; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 20;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 15;
+
+    const colorChoice = Math.random();
+    if (colorChoice < 0.4) {
+      colors[i * 3] = 0; colors[i * 3 + 1] = 0.94; colors[i * 3 + 2] = 1;
+    } else if (colorChoice < 0.7) {
+      colors[i * 3] = 0.66; colors[i * 3 + 1] = 0.33; colors[i * 3 + 2] = 0.97;
+    } else {
+      colors[i * 3] = 1; colors[i * 3 + 1] = 0.7; colors[i * 3 + 2] = 0.28;
+    }
+    sizes[i] = Math.random() * 3 + 0.5;
+  }
+
+  const particleGeom = new THREE.BufferGeometry();
+  particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particleGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  particleGeom.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+  const particleMat = new THREE.ShaderMaterial({
+    vertexShader: `
+      attribute float size;
+      attribute vec3 color;
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (200.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+        vAlpha = smoothstep(15.0, 2.0, -mvPosition.z) * 0.7;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) discard;
+        float glow = exp(-d * 6.0);
+        gl_FragColor = vec4(vColor, glow * vAlpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+
+  const particles = new THREE.Points(particleGeom, particleMat);
+  scene.add(particles);
+
+  // ── Wireframe geometries ──
+  const geoGroup = new THREE.Group();
+  scene.add(geoGroup);
+
+  const wireMat1 = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true, transparent: true, opacity: 0.08 });
+  const wireMat2 = new THREE.MeshBasicMaterial({ color: 0xa855f7, wireframe: true, transparent: true, opacity: 0.06 });
+  const wireMat3 = new THREE.MeshBasicMaterial({ color: 0xffb347, wireframe: true, transparent: true, opacity: 0.06 });
+
+  const ico = new THREE.Mesh(new THREE.IcosahedronGeometry(1.8, 1), wireMat1);
+  ico.position.set(3.5, 1, -3);
+  geoGroup.add(ico);
+
+  const torus = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.3, 8, 24), wireMat2);
+  torus.position.set(-4, -1.5, -4);
+  geoGroup.add(torus);
+
+  const octa = new THREE.Mesh(new THREE.OctahedronGeometry(1.0, 0), wireMat3);
+  octa.position.set(-2, 2.5, -5);
+  geoGroup.add(octa);
+
+  const dodeca = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8, 0), wireMat1.clone());
+  dodeca.material.opacity = 0.05;
+  dodeca.position.set(5, -2, -6);
+  geoGroup.add(dodeca);
+
+  const torusKnot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.6, 0.2, 64, 8), wireMat2.clone());
+  torusKnot.material.opacity = 0.05;
+  torusKnot.position.set(0, -3, -4);
+  geoGroup.add(torusKnot);
+
+  // ── Connection lines ──
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.04 });
+  const lineCount = 30;
+  for (let i = 0; i < lineCount; i++) {
+    const lineGeom = new THREE.BufferGeometry();
+    const verts = new Float32Array(6);
+    verts[0] = (Math.random() - 0.5) * 16;
+    verts[1] = (Math.random() - 0.5) * 16;
+    verts[2] = (Math.random() - 0.5) * 10;
+    verts[3] = verts[0] + (Math.random() - 0.5) * 6;
+    verts[4] = verts[1] + (Math.random() - 0.5) * 6;
+    verts[5] = verts[2] + (Math.random() - 0.5) * 4;
+    lineGeom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    scene.add(new THREE.Line(lineGeom, lineMat));
+  }
+
+  // ── Mouse tracking ──
+  let mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  // ── Scroll tracking ──
+  let scrollProgress = 0;
+  window.addEventListener('scroll', () => {
+    scrollProgress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  });
+
+  // ── Animation loop ──
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    // Rotate particles slowly
+    particles.rotation.y = t * 0.02 + mouseX * 0.1;
+    particles.rotation.x = t * 0.015 + mouseY * 0.05;
+
+    // Animate particle positions subtly
+    const pos = particleGeom.attributes.position.array;
+    for (let i = 0; i < particleCount; i++) {
+      pos[i * 3 + 1] += Math.sin(t * 0.3 + i * 0.01) * 0.001;
+    }
+    particleGeom.attributes.position.needsUpdate = true;
+
+    // Rotate wireframe objects
+    ico.rotation.x = t * 0.15;
+    ico.rotation.y = t * 0.2;
+    torus.rotation.x = t * 0.25;
+    torus.rotation.z = t * 0.15;
+    octa.rotation.y = t * 0.3;
+    octa.rotation.z = t * 0.1;
+    dodeca.rotation.x = t * 0.12;
+    dodeca.rotation.y = t * 0.18;
+    torusKnot.rotation.x = t * 0.1;
+    torusKnot.rotation.y = t * 0.15;
+
+    // Camera follows mouse gently
+    camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.02;
+    camera.position.y += (-mouseY * 0.3 - camera.position.y) * 0.02;
+    camera.lookAt(0, 0, 0);
+
+    // Scroll-based depth
+    camera.position.z = 5 - scrollProgress * 2;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+
+// ═══════════════════════════════════════
+//  TEAM CARD MINI 3D SCENES
+// ═══════════════════════════════════════
+
+document.querySelectorAll('.team-3d').forEach((cvs, idx) => {
+  const colorStr = cvs.dataset.color;
+  const [r, g, b] = colorStr.split(',').map(Number);
+  const color = new THREE.Color(r / 255, g / 255, b / 255);
+
+  const renderer = new THREE.WebGLRenderer({ canvas: cvs, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+  camera.position.z = 3;
+
+  // Mini particle ring
+  const ringCount = 300;
+  const ringPos = new Float32Array(ringCount * 3);
+  for (let i = 0; i < ringCount; i++) {
+    const angle = (i / ringCount) * Math.PI * 2 + Math.random() * 0.3;
+    const radius = 1.2 + Math.random() * 0.4;
+    ringPos[i * 3] = Math.cos(angle) * radius;
+    ringPos[i * 3 + 1] = (Math.random() - 0.5) * 0.6;
+    ringPos[i * 3 + 2] = Math.sin(angle) * radius;
+  }
+
+  const ringGeom = new THREE.BufferGeometry();
+  ringGeom.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+  const ringMat = new THREE.PointsMaterial({ color: color, size: 0.04, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+  scene.add(new THREE.Points(ringGeom, ringMat));
+
+  // Center wireframe shape
+  const shapes = [
+    new THREE.IcosahedronGeometry(0.5, 0),
+    new THREE.OctahedronGeometry(0.5, 0),
+    new THREE.TetrahedronGeometry(0.5, 0)
+  ];
+  const shapeMesh = new THREE.Mesh(shapes[idx], new THREE.MeshBasicMaterial({ color: color, wireframe: true, transparent: true, opacity: 0.25 }));
+  scene.add(shapeMesh);
+
+  function resizeCanvas() {
+    const rect = cvs.parentElement.getBoundingClientRect();
+    renderer.setSize(rect.width, rect.height);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  const clock = new THREE.Clock();
+  function anim() {
+    requestAnimationFrame(anim);
+    const t = clock.getElapsedTime();
+    shapeMesh.rotation.x = t * 0.4;
+    shapeMesh.rotation.y = t * 0.6;
+
+    const rp = ringGeom.attributes.position.array;
+    for (let i = 0; i < ringCount; i++) {
+      rp[i * 3 + 1] += Math.sin(t * 2 + i * 0.1) * 0.001;
+    }
+    ringGeom.attributes.position.needsUpdate = true;
+    renderer.render(scene, camera);
+  }
+  anim();
+});
+
+// ═══════════════════════════════════════
+//  CURSOR GLOW
+// ═══════════════════════════════════════
+
+const glow = document.getElementById('cursorGlow');
+document.addEventListener('mousemove', (e) => {
+  glow.style.left = e.clientX + 'px';
+  glow.style.top = e.clientY + 'px';
+});
+
+// ═══════════════════════════════════════
+//  REVEAL ON SCROLL
+// ═══════════════════════════════════════
+
+const reveals = document.querySelectorAll('.reveal');
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      revealObs.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+reveals.forEach(el => revealObs.observe(el));
+
+// ═══════════════════════════════════════
+//  COUNTER ANIMATION
+// ═══════════════════════════════════════
+
+function animateCounter(el) {
+  const target = parseInt(el.dataset.count);
+  const suffix = el.dataset.suffix || '';
+  const duration = 2200;
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 4);
+    el.textContent = Math.floor(eased * target) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+const counterObs = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      animateCounter(entry.target);
+      counterObs.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('[data-count]').forEach(el => counterObs.observe(el));
+
+// ═══════════════════════════════════════
+//  MOBILE MENU
+// ═══════════════════════════════════════
+
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+
+menuBtn.addEventListener('click', () => {
+  menuBtn.classList.toggle('active');
+  mobileMenu.classList.toggle('open');
+  document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+});
+
+// Close mobile menu on link click
+mobileMenu.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const href = a.getAttribute('href');
+    menuBtn.classList.remove('active');
+    mobileMenu.classList.remove('open');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  });
+});
+
+// ═══════════════════════════════════════
+//  SMOOTH NAV SCROLL
+// ═══════════════════════════════════════
+
+document.querySelectorAll('.nav-links a, .footer-list a').forEach(a => {
+  a.addEventListener('click', e => {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      e.preventDefault();
+      document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
+
+// ═══════════════════════════════════════
+//  GLITCH EFFECT ON HERO TITLE
+// ═══════════════════════════════════════
+
+const heroTitle = document.querySelector('.hero-title');
+setInterval(() => {
+  if (Math.random() > 0.95) {
+    heroTitle.style.transform = `translate(${(Math.random()-0.5)*4}px, ${(Math.random()-0.5)*2}px)`;
+    heroTitle.style.textShadow = `${(Math.random()-0.5)*6}px 0 var(--cyan), ${(Math.random()-0.5)*6}px 0 var(--purple)`;
+    setTimeout(() => {
+      heroTitle.style.transform = '';
+      heroTitle.style.textShadow = '';
+    }, 80);
+  }
+}, 100);
+
+// ═══════════════════════════════════════
+//  PHOTO UPLOAD
+// ═══════════════════════════════════════
+
+function handlePhotoUpload(input, index) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const visual = input.closest('.team-card-visual');
+
+    // Remove existing uploaded photo if any
+    const existing = visual.querySelector('.uploaded-photo');
+    if (existing) existing.remove();
+
+    // Create image element
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    img.className = 'uploaded-photo';
+    visual.appendChild(img);
+
+    // Hide the text avatar
+    const avatar = visual.querySelector('.team-avatar');
+    if (avatar) avatar.style.opacity = '0';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════
+//  KOREAN FONT LOADER FOR PDF
+// ═══════════════════════════════════════
+
+let koreanFontBase64 = null;
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunks = [];
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, bytes.length))));
+  }
+  return btoa(chunks.join(''));
+}
+
+async function ensureKoreanFont() {
+  if (koreanFontBase64) return;
+
+  const urls = [
+    'https://cdn.jsdelivr.net/gh/nicei2024/jspdf-korean-font@main/NanumGothic-Regular.ttf',
+    'https://cdn.jsdelivr.net/gh/nicei2024/jspdf-korean-font@main/NanumGothicBold.ttf',
+    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/nanumgothic/NanumGothic-Regular.ttf',
+    'https://raw.githubusercontent.com/nicei2024/jspdf-korean-font/main/NanumGothic-Regular.ttf',
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength < 50000) continue; // too small, probably error page
+      koreanFontBase64 = arrayBufferToBase64(buf);
+      return;
+    } catch(e) {
+      continue;
+    }
+  }
+  throw new Error('Korean font load failed from all sources');
+}
+
+// ═══════════════════════════════════════
+//  PDF COMMON: DECORATIVE BORDER
+// ═══════════════════════════════════════
+
+function drawCertBorder(doc, W, H) {
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, H, 'F');
+
+  doc.setDrawColor(180, 160, 120);
+  doc.setLineWidth(0.8);
+  doc.rect(12, 12, W - 24, H - 24);
+  doc.setLineWidth(0.3);
+  doc.rect(15, 15, W - 30, H - 30);
+
+  const corners = [[15, 15], [W - 15, 15], [15, H - 15], [W - 15, H - 15]];
+  doc.setLineWidth(0.5);
+  corners.forEach(([x, y]) => {
+    const dx = x < W / 2 ? 1 : -1;
+    const dy = y < H / 2 ? 1 : -1;
+    doc.line(x, y, x + dx * 12, y);
+    doc.line(x, y, x, y + dy * 12);
+  });
+
+  const cx = W / 2;
+  doc.setDrawColor(160, 140, 100);
+  doc.setLineWidth(0.4);
+  doc.line(40, 42, W - 40, 42);
+  doc.line(40, 43, W - 40, 43);
+}
+
+function drawSealAndFooter(doc, cx, signY, W, H, isKorean) {
+  // ── Signature line ──
+  doc.setDrawColor(120, 120, 120);
+  doc.setLineWidth(0.3);
+  doc.line(cx - 30, signY + 16, cx + 25, signY + 16);
+
+  // ── Corporate Representative Seal (법인대표 직인) ──
+  const sealX = cx + 32;
+  const sealY = signY + 5;
+  const outerR = 15;
+  const innerR = 12;
+
+  // Outer double circle
+  doc.setDrawColor(190, 40, 40);
+  doc.setLineWidth(1.8);
+  doc.circle(sealX, sealY, outerR);
+  doc.setLineWidth(0.6);
+  doc.circle(sealX, sealY, innerR);
+
+  // Cross lines inside seal
+  doc.setLineWidth(0.4);
+  doc.line(sealX - innerR + 2, sealY, sealX + innerR - 2, sealY);
+
+  if (isKorean) {
+    // Top: 법인대표 / Bottom: 인
+    doc.setFont('NanumGothic', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(190, 40, 40);
+    doc.text('법인대표', sealX, sealY - 3, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text('인', sealX, sealY + 7, { align: 'center' });
+  } else {
+    // Top: CORP. / Bottom: SEAL
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(190, 40, 40);
+    doc.text('CORPORATE', sealX, sealY - 3.5, { align: 'center' });
+    doc.text('REP.', sealX, sealY - 0.5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.text('SEAL', sealX, sealY + 6.5, { align: 'center' });
+  }
+
+  // ── Registration number (법인등록 인증번호) ──
+  const regNum = 'REG-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
+  if (isKorean) {
+    doc.setFont('NanumGothic', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(140, 140, 140);
+    doc.text('법인대표 인증번호: ' + regNum, cx, signY + 24, { align: 'center' });
+  } else {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(140, 140, 140);
+    doc.text('Corporate Rep. Certification No: ' + regNum, cx, signY + 24, { align: 'center' });
+  }
+
+  // ── Footer ──
+  doc.setFontSize(7);
+  doc.setTextColor(160, 160, 160);
+  if (isKorean) {
+    doc.setFont('NanumGothic', 'normal');
+    doc.text('위키소프트보험계리법인 | 서울시 종로구 인사동5길 42 종로빌딩 502호', cx, H - 22, { align: 'center' });
+  } else {
+    doc.setFont('helvetica', 'normal');
+    doc.text('WIKISOFT Actuarial Consulting | #502 Jongno Bldg, 42 Insadong 5-gil, Jongno-gu, Seoul, Korea', cx, H - 22, { align: 'center' });
+  }
+  doc.setFont('helvetica', 'normal');
+  doc.text('Tel: +82-10-2822-1895 | E-mail: mayman11@wikisoft.co.kr | www.wkac.co.kr', cx, H - 18, { align: 'center' });
+}
+
+// ═══════════════════════════════════════
+//  KOREAN CERTIFICATE PDF
+// ═══════════════════════════════════════
+
+async function generateCertificateKR(name, dept, role) {
+  const btn = event.currentTarget;
+  const origHTML = btn.innerHTML;
+  btn.innerHTML = '<span class="btn-icon">&#8987;</span> Loading...';
+  btn.disabled = true;
+
+  try {
+    await ensureKoreanFont();
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const W = 210, H = 297, cx = W / 2;
+
+    // Register Korean font
+    doc.addFileToVFS('NanumGothic.ttf', koreanFontBase64);
+    doc.addFont('NanumGothic.ttf', 'NanumGothic', 'normal');
+
+    const today = new Date();
+    const dateStr = today.getFullYear() + '\uB144 ' + String(today.getMonth()+1).padStart(2,'0') + '\uC6D4 ' + String(today.getDate()).padStart(2,'0') + '\uC77C';
+    const certNum = 'WKAC-' + today.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
+
+    drawCertBorder(doc, W, H);
+
+    // Company header
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Actuarial Consulting with WIKISOFT', cx, 30, { align: 'center' });
+    doc.setFontSize(7.5);
+    doc.setTextColor(150, 150, 150);
+    doc.text('www.wkac.co.kr', cx, 35, { align: 'center' });
+
+    // Title
+    doc.setFont('NanumGothic', 'normal');
+    doc.setFontSize(28);
+    doc.setTextColor(40, 40, 40);
+    doc.text('\uACBD \uB825 \uC99D \uBA85 \uC11C', cx, 62, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(140, 140, 140);
+    doc.text('CERTIFICATE OF EMPLOYMENT', cx, 70, { align: 'center' });
+
+    // Decorative line
+    doc.setDrawColor(160, 140, 100);
+    doc.setLineWidth(0.5);
+    doc.line(55, 76, W - 55, 76);
+
+    // Cert number
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No. ' + certNum, cx, 84, { align: 'center' });
+
+    // Personal info
+    const startY = 98;
+    const labelX = 42;
+    const valX = 82;
+    const gap = 13;
+
+    doc.setDrawColor(220, 215, 205);
+    doc.setLineWidth(0.2);
+
+    const fields = [
+      ['\uC131        \uBA85', name],
+      ['\uC804        \uACF5', dept],
+      ['\uADFC\uBB34\uBD80\uC11C', '\uB370\uC774\uD130\uAC80\uC99D\uD300'],
+      ['\uC9C1        \uC704', '\uC778\uD134'],
+      ['\uADFC\uBB34\uAE30\uAC04', '2025\uB144 03\uC6D4 01\uC77C ~ 2025\uB144 11\uC6D4 30\uC77C (9\uAC1C\uC6D4)'],
+    ];
+
+    fields.forEach(([label, value], i) => {
+      const y = startY + i * gap;
+      doc.setFont('NanumGothic', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(label, labelX, y);
+
+      doc.setFontSize(11);
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, valX, y);
+
+      doc.line(valX, y + 2, W - 38, y + 2);
+    });
+
+    // Work description
+    const descY = startY + fields.length * gap + 14;
+    doc.setDrawColor(160, 140, 100);
+    doc.setLineWidth(0.3);
+    doc.line(38, descY, W - 38, descY);
+
+    doc.setFont('NanumGothic', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text('\uC8FC\uC694 \uC5C5\uBB34 \uB0B4\uC6A9', labelX, descY + 12);
+
+    doc.setFontSize(9.5);
+    doc.setTextColor(50, 50, 50);
+
+    const tasks = [
+      '1. ' + role,
+      '2. K-IFRS 1019\uD638 \uC885\uC5C5\uC6D0\uAE09\uC5EC \uD68C\uACC4 \uB370\uC774\uD130 \uC815\uD569\uC131 \uAC80\uC99D',
+      '3. \uBCF4\uD5D8\uC218\uB9AC\uC801 \uAC00\uC815 \uAC80\uC99D \uBC0F \uC774\uC0C1\uCE58 \uD0D0\uC9C0 \uB85C\uC9C1 \uAC1C\uBC1C',
+      '4. \uAC80\uC99D \uACB0\uACFC \uB9AC\uD3EC\uD2B8 \uC2DC\uC2A4\uD15C \uAC1C\uBC1C \uCC38\uC5EC',
+      '5. \uD504\uB85C\uC81D\uD2B8 \uBB38\uC11C\uD654 \uBC0F \uD488\uC9C8 \uBCF4\uC99D \uD65C\uB3D9',
+    ];
+
+    tasks.forEach((t, i) => {
+      doc.text(t, labelX + 2, descY + 22 + i * 8);
+    });
+
+    // Certification body
+    const bodyY = descY + 22 + tasks.length * 8 + 14;
+    doc.setDrawColor(160, 140, 100);
+    doc.setLineWidth(0.3);
+    doc.line(38, bodyY, W - 38, bodyY);
+
+    doc.setFont('NanumGothic', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(40, 40, 40);
+    doc.text('\uC704 \uC0AC\uB78C\uC740 \uB2F9 \uBC95\uC778\uC5D0\uC11C \uC0C1\uAE30 \uAE30\uAC04 \uB3D9\uC548 \uC778\uD134\uC73C\uB85C \uADFC\uBB34\uD558\uC600\uC73C\uBA70,', cx, bodyY + 14, { align: 'center' });
+    doc.text('K-IFRS 1019\uD638 \uAE30\uBC18 \uB370\uC774\uD130 \uAC80\uC99D \uD504\uB85C\uC81D\uD2B8\uC5D0 \uD0C1\uC6D4\uD55C \uC131\uACFC\uB85C \uAE30\uC5EC\uD558\uC600\uC74C\uC744', cx, bodyY + 22, { align: 'center' });
+    doc.text('\uC774\uC5D0 \uC99D\uBA85\uD569\uB2C8\uB2E4.', cx, bodyY + 30, { align: 'center' });
+
+    // Date
+    doc.setFontSize(11);
+    doc.setTextColor(60, 60, 60);
+    doc.text(dateStr, cx, bodyY + 48, { align: 'center' });
+
+    // Company & CEO (법인대표)
+    const signY = bodyY + 64;
+    doc.setFontSize(13);
+    doc.setTextColor(40, 40, 40);
+    doc.text('위키소프트보험계리법인', cx, signY, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setTextColor(60, 60, 60);
+    doc.text('대표이사 (법인대표)   이 기 훈', cx, signY + 10, { align: 'center' });
+
+    drawSealAndFooter(doc, cx, signY, W, H, true);
+
+    doc.save('\uACBD\uB825\uC99D\uBA85\uC11C_' + name + '_\uC704\uD0A4\uC18C\uD504\uD2B8.pdf');
+
+  } catch(e) {
+    alert('\uD55C\uAE00 \uD3F0\uD2B8 \uB85C\uB4DC \uC2E4\uD328: ' + e.message + '\n\n\uC601\uBB38 \uC99D\uBA85\uC11C(ENG) \uBC84\uD2BC\uC744 \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.');
+  } finally {
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════
+//  ENGLISH CERTIFICATE PDF
+// ═══════════════════════════════════════
+
+function generateCertificateEN(name, dept, role) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const W = 210, H = 297, cx = W / 2;
+
+  const today = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dateStr = months[today.getMonth()] + ' ' + today.getDate() + ', ' + today.getFullYear();
+  const certNum = 'WKAC-' + today.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
+
+  drawCertBorder(doc, W, H);
+
+  // Company header
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(120, 120, 120);
+  doc.text('Actuarial Consulting with WIKISOFT', cx, 30, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setTextColor(150, 150, 150);
+  doc.text('www.wkac.co.kr', cx, 35, { align: 'center' });
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  doc.setTextColor(40, 40, 40);
+  doc.text('CERTIFICATE', cx, 58, { align: 'center' });
+
+  doc.setFontSize(13);
+  doc.setTextColor(100, 100, 100);
+  doc.text('OF EMPLOYMENT', cx, 66, { align: 'center' });
+
+  // Decorative line
+  doc.setDrawColor(160, 140, 100);
+  doc.setLineWidth(0.5);
+  doc.line(55, 72, W - 55, 72);
+
+  // Cert number
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Certificate No. ' + certNum, cx, 80, { align: 'center' });
+
+  // Personal info
+  const startY = 96;
+  const labelX = 42;
+  const valX = 85;
+  const gap = 13;
+
+  doc.setDrawColor(220, 215, 205);
+  doc.setLineWidth(0.2);
+
+  const fields = [
+    ['Name', name],
+    ['Major', dept],
+    ['Department', 'Data Validation Team'],
+    ['Position', 'Intern'],
+    ['Period', 'March 1, 2025 ~ November 30, 2025 (9 months)'],
+  ];
+
+  fields.forEach(([label, value], i) => {
+    const y = startY + i * gap;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, labelX, y);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 30, 30);
+    doc.text(value, valX, y);
+
+    doc.line(valX, y + 2, W - 38, y + 2);
+  });
+
+  // Work description
+  const descY = startY + fields.length * gap + 14;
+  doc.setDrawColor(160, 140, 100);
+  doc.setLineWidth(0.3);
+  doc.line(38, descY, W - 38, descY);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Key Responsibilities', labelX, descY + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(50, 50, 50);
+
+  const tasks = [
+    '1. ' + role,
+    '2. Employee benefits accounting data validation under K-IFRS 1019',
+    '3. Actuarial assumption verification and anomaly detection development',
+    '4. Validation report system development',
+    '5. Project documentation and quality assurance activities',
+  ];
+
+  tasks.forEach((t, i) => {
+    doc.text(t, labelX + 2, descY + 22 + i * 8);
+  });
+
+  // Certification body
+  const bodyY = descY + 22 + tasks.length * 8 + 14;
+  doc.setDrawColor(160, 140, 100);
+  doc.setLineWidth(0.3);
+  doc.line(38, bodyY, W - 38, bodyY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10.5);
+  doc.setTextColor(40, 40, 40);
+  doc.text('This is to certify that the above-named person served as an intern', cx, bodyY + 14, { align: 'center' });
+  doc.text('at WIKISOFT Actuarial Consulting during the aforementioned period,', cx, bodyY + 22, { align: 'center' });
+  doc.text('and made outstanding contributions to the K-IFRS 1019', cx, bodyY + 30, { align: 'center' });
+  doc.text('Data Validation Project.', cx, bodyY + 38, { align: 'center' });
+
+  // Date
+  doc.setFontSize(11);
+  doc.setTextColor(60, 60, 60);
+  doc.text(dateStr, cx, bodyY + 54, { align: 'center' });
+
+  // Company & CEO (Corporate Representative)
+  const signY = bodyY + 68;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(40, 40, 40);
+  doc.text('WIKISOFT Actuarial Consulting', cx, signY, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60, 60, 60);
+  doc.text('CEO (Corporate Representative)   Lee Ki-Hoon', cx, signY + 10, { align: 'center' });
+
+  drawSealAndFooter(doc, cx, signY, W, H, false);
+
+  doc.save('Certificate_' + name.replace(/\s/g, '_') + '_WIKISOFT.pdf');
+}
+</script>
+</body>
+</html>
