@@ -2355,7 +2355,7 @@ async function generateCertificateKR(name, dept, role) {
     const fields = [
       ['\uC131        \uBA85', name],
       ['\uC804        \uACF5', dept],
-      ['\uADFC\uBB34\uBD80\uC11C', '\uB370\uC774\uD130\uAC80\uC99D\uD300'],
+      ['\uADFC \uBB34 \uCC98', '\uACC4\uB9AC\uD300'],
       ['\uC9C1        \uC704', '\uC778\uD134'],
       ['\uADFC\uBB34\uAE30\uAC04', '2025\uB144 03\uC6D4 01\uC77C ~ 2025\uB144 11\uC6D4 30\uC77C (9\uAC1C\uC6D4)'],
     ];
@@ -2389,11 +2389,12 @@ async function generateCertificateKR(name, dept, role) {
     doc.setTextColor(50, 50, 50);
 
     const tasks = [
-      '1. ' + role,
-      '2. K-IFRS 1019\uD638 \uC885\uC5C5\uC6D0\uAE09\uC5EC \uD68C\uACC4 \uB370\uC774\uD130 \uC815\uD569\uC131 \uAC80\uC99D',
-      '3. \uBCF4\uD5D8\uC218\uB9AC\uC801 \uAC00\uC815 \uAC80\uC99D \uBC0F \uC774\uC0C1\uCE58 \uD0D0\uC9C0 \uB85C\uC9C1 \uAC1C\uBC1C',
-      '4. \uAC80\uC99D \uACB0\uACFC \uB9AC\uD3EC\uD2B8 \uC2DC\uC2A4\uD15C \uAC1C\uBC1C \uCC38\uC5EC',
-      '5. \uD504\uB85C\uC81D\uD2B8 \uBB38\uC11C\uD654 \uBC0F \uD488\uC9C8 \uBCF4\uC99D \uD65C\uB3D9',
+      '1. AI\uB97C \uD65C\uC6A9\uD55C K-IFRS 1019 \uD1F4\uC9C1\uAE09\uC5EC\uBD80\uCC44\uC0B0\uCD9C \uC2DC\uC2A4\uD15C \uAC1C\uBC1C \uCC38\uC5EC',
+      '2. ' + role,
+      '3. K-IFRS 1019\uD638 \uC885\uC5C5\uC6D0\uAE09\uC5EC \uD68C\uACC4 \uB370\uC774\uD130 \uC815\uD569\uC131 \uAC80\uC99D',
+      '4. \uBCF4\uD5D8\uC218\uB9AC\uC801 \uAC00\uC815 \uAC80\uC99D \uBC0F \uC774\uC0C1\uCE58 \uD0D0\uC9C0 \uB85C\uC9C1 \uAC1C\uBC1C',
+      '5. \uAC80\uC99D \uACB0\uACFC \uB9AC\uD3EC\uD2B8 \uC2DC\uC2A4\uD15C \uAC1C\uBC1C \uCC38\uC5EC',
+      '6. \uD504\uB85C\uC81D\uD2B8 \uBB38\uC11C\uD654 \uBC0F \uD488\uC9C8 \uBCF4\uC99D \uD65C\uB3D9',
     ];
 
     tasks.forEach((t, i) => {
@@ -2497,7 +2498,7 @@ function generateCertificateEN(name, dept, role) {
   const fields = [
     ['Name', name],
     ['Major', dept],
-    ['Department', 'Data Validation Team'],
+    ['Department', 'Actuarial Team'],
     ['Position', 'Intern'],
     ['Period', 'March 1, 2025 ~ November 30, 2025 (9 months)'],
   ];
@@ -2533,11 +2534,12 @@ function generateCertificateEN(name, dept, role) {
   doc.setTextColor(50, 50, 50);
 
   const tasks = [
-    '1. ' + role,
-    '2. Employee benefits accounting data validation under K-IFRS 1019',
-    '3. Actuarial assumption verification and anomaly detection development',
-    '4. Validation report system development',
-    '5. Project documentation and quality assurance activities',
+    '1. Participated in developing K-IFRS 1019 retirement benefit obligation calculation system using AI',
+    '2. ' + role,
+    '3. Employee benefits accounting data validation under K-IFRS 1019',
+    '4. Actuarial assumption verification and anomaly detection development',
+    '5. Validation report system development',
+    '6. Project documentation and quality assurance activities',
   ];
 
   tasks.forEach((t, i) => {
