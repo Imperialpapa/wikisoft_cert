@@ -2189,6 +2189,32 @@ async function ensureKoreanFont() {
 //  PDF COMMON: DECORATIVE BORDER
 // ═══════════════════════════════════════
 
+// ── Mobile-compatible PDF download ──
+function savePdfMobile(doc, filename) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    if (isIOS) {
+      // iOS Safari: open in new tab (download attr not supported)
+      window.open(url, '_blank');
+    } else {
+      // Android: use hidden link with download attribute
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+    }
+  } else {
+    doc.save(filename);
+  }
+}
+
 function drawCertBorder(doc, W, H) {
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
@@ -2430,7 +2456,7 @@ async function generateCertificateKR(name, dept, role) {
 
     drawSealAndFooter(doc, cx, signY, W, H, true);
 
-    doc.save('\uACBD\uB825\uC99D\uBA85\uC11C_' + name + '_\uC704\uD0A4\uC18C\uD504\uD2B8.pdf');
+    savePdfMobile(doc, '\uACBD\uB825\uC99D\uBA85\uC11C_' + name + '_\uC704\uD0A4\uC18C\uD504\uD2B8.pdf');
 
   } catch(e) {
     alert('\uD55C\uAE00 \uD3F0\uD2B8 \uB85C\uB4DC \uC2E4\uD328: ' + e.message + '\n\n\uC601\uBB38 \uC99D\uBA85\uC11C(ENG) \uBC84\uD2BC\uC744 \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.');
@@ -2578,7 +2604,7 @@ function generateCertificateEN(name, dept, role) {
 
   drawSealAndFooter(doc, cx, signY, W, H, false);
 
-  doc.save('Certificate_' + name.replace(/\s/g, '_') + '_WIKISOFT.pdf');
+  savePdfMobile(doc, 'Certificate_' + name.replace(/\s/g, '_') + '_WIKISOFT.pdf');
 }
 </script>
 </body>
